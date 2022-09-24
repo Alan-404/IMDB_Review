@@ -1,96 +1,104 @@
 #%%
-import numpy as np
 import pandas as pd
+import numpy as np
+from keras.layers import Dense, Flatten, LSTM, GRU, SimpleRNN, Embedding
 from keras.preprocessing.text import Tokenizer
 from keras_preprocessing.sequence import pad_sequences
+import re
 # %%
 df = pd.read_csv('../datasets/IMDB Dataset.csv')
 # %%
 df.head(10)
 # %%
-df['sentiment'] = df['sentiment'].apply(lambda x: 1 if x == 'positive' else 0)
+df.info()
 # %%
-X = np.array(df['review'])
+df.describe()
 # %%
-y = np.array(df['sentiment'])
+df['review'] = df['review'].apply(lambda x: re.sub(r'[,.!&]', '', x))
 # %%
-vocab_size = 10000
-max_length = 140
-embedded_size = 64
+df['review']
 # %%
-tokenizer = Tokenizer(num_words=vocab_size, oov_token='<OOV>')
+tokenizer = Tokenizer()
 # %%
-tokenizer.fit_on_texts(X)
+input_sequences = np.array(df['review'])
+# %%
+input_sequences[0]
+# %%
+tokenizer.fit_on_texts(input_sequences)
 # %%
 tokenizer.word_index
 # %%
-X_processed = tokenizer.texts_to_sequences(X)
-#%%
-X_processed
+vocab_size = len(tokenizer.word_counts) + 1
+embeded_dim = 64
+max_length = 140
 # %%
-X_padded = pad_sequences(X_processed, maxlen=max_length, truncating='post', padding='post')
+vocab_size
 # %%
-X_padded.shape
+train_sequences = tokenizer.texts_to_sequences(input_sequences)
 # %%
-X_padded
+padded_sequences = pad_sequences(train_sequences, maxlen=max_length, padding='post', truncating='post')
+# %%
+padded_sequences.shape
+# %%
+y = np.array(df['review'].apply(lambda x: 1 if x == 'positive' else 0))
+# %%
+y.shape
 # %%
 from keras.models import Sequential
-from keras.layers import Embedding, Flatten, Dense
 # %%
-model = Sequential()
+# Normal Embedding Word Model
+model1 = Sequential()
 
-model.add(Embedding(input_dim=vocab_size, output_dim=embedded_size, input_length=max_length))
-model.add(Flatten())
-model.add(Dense(units=10, activation='relu'))
-model.add(Dense(units=1, activation='sigmoid'))
+model1.add(Embedding(input_dim=vocab_size, output_dim=embeded_dim, input_length=max_length))
+model1.add(Flatten())
+model1.add(Dense(units=20, activation='relu'))
+model1.add(Dense(units=1, activation='sigmoid'))
 # %%
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+model1.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 # %%
-model.summary()
-# %%
-
-#%%
 from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(X_padded, y, test_size=0.2, random_state=41)
 # %%
-X_train, X_val , y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=41)
+X_train ,X_test, y_train, y_test = train_test_split(padded_sequences, y, test_size=0.2, random_state=41)
 # %%
-history_model = model.fit(X_train, y_train, epochs=10, validation_data=(X_val, y_val))
+history_model1 = model1.fit(X_train, y_train, epochs=5)
 # %%
-import matplotlib.pyplot as plt
+model1.evaluate(X_test, y_test)
+# %%
+# Simple RNN Model
+model2 = Sequential()
 
-plt.plot(history_model.history['accuracy'])
-plt.plot(history_model.history['val_accuracy'])
-plt.title("Model Accuracy")
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend(['train', 'validation'], loc='upper left')
+model2.add(Embedding(input_dim=vocab_size, output_dim = embeded_dim, input_length=max_length))
+model2.add(SimpleRNN(units=64))
+model2.add(Dense(units=10, activation='relu'))
+model2.add(Dense(units=1, activation='sigmoid'))
 # %%
-model_2 = Sequential()
+model2.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', 'mse'])
+# %%
+model2.fit(X_train, y_train, epochs=4)
+# %%
+model2.evaluate(X_test, y_test)
+# %%
 
-model_2.add(Embedding(input_dim=vocab_size, output_dim=embedded_size, input_length=max_length))
-model_2.add(Flatten())
-model_2.add(Dense(units=5, activation='relu'))
-model_2.add(Dense(units=1, activation='sigmoid'))
 # %%
-model_2.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-history_model_2 = model_2.fit(X_train, y_train, epochs=5, validation_data=(X_val, y_val))
 # %%
-import matplotlib.pyplot as plt
 
-plt.plot(history_model_2.history['accuracy'])
-plt.plot(history_model_2.history['val_accuracy'])
-plt.title("Model Accuracy")
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend(['train', 'validation'], loc='upper left')
 # %%
-model_2.evaluate(X_test, y_test)
+
 # %%
-model.evaluate(X_test, y_test)
+
 # %%
-model.save('../models/first_model.h5')
+
 # %%
-model_2.save('../models/second_model.h5')
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
+# %%
+
 # %%
